@@ -1,0 +1,30 @@
+# Environment variables — never commit secrets
+.env
+.env.*
+!.env.example
+
+# Internal docs (specs and context)
+docs/
+
+# Go build artifacts
+devlevel
+devlevel.exe
+
+# Go test cache and coverage
+*.test
+*.out
+coverage.html
+
+# Go workspace (if used locally)
+go.work
+go.work.sum
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS artifacts
+.DS_Store
+Thumbs.db

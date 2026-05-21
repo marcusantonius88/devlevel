@@ -4,6 +4,7 @@
 
 ```
 🚀 DevLevel
+ℹ️  Using public GitHub API
 
 🔥 CURRENT STREAK: 4 DAYS
 ✅ Daily Goal: COMPLETE
@@ -40,16 +41,14 @@ The streak is the main character. Everything else — XP, levels, rank — exist
 - 🏅 **Rank titles** — Rookie → Builder → Engineer → Architect
 - 🎯 **Next level indicator** — shows exactly how many XP remain
 - 💬 **Motivational messages** — context-aware, adapts to your streak length
-- 🔒 **Works with private repos** — uses the GitHub compare API to count commits accurately
+- 🔓 **No setup required** — works with any public GitHub username, no token needed
 
 ---
 
 ## Requirements
 
 - [Go 1.21+](https://go.dev/dl/)
-- A [GitHub Personal Access Token (PAT)](https://github.com/settings/tokens)
-
-No external dependencies — uses only Go's standard library.
+- That's it.
 
 ---
 
@@ -60,29 +59,29 @@ git clone https://github.com/marcusantonius88/devlevel.git
 cd devlevel
 ```
 
-Create a `.env` file in the project root:
-
-```env
-GITHUB_TOKEN=ghp_your_personal_access_token
-```
-
-Or export it directly:
-
-```bash
-export GITHUB_TOKEN="ghp_your_personal_access_token"   # Linux/macOS
-$env:GITHUB_TOKEN = "ghp_your_personal_access_token"   # Windows PowerShell
-```
+No external dependencies. No tokens. No `.env` files.
 
 ---
 
 ## Running
 
 ```bash
-go run ./cmd
-
-# Debug mode — shows each PushEvent and commit count per repo
-go run ./cmd --debug
+go run ./cmd --user <github-username>
 ```
+
+Example:
+
+```bash
+go run ./cmd --user marcusantonius88
+```
+
+Debug mode — shows each PushEvent and commit count per repo:
+
+```bash
+go run ./cmd --user marcusantonius88 --debug
+```
+
+> **Note:** DevLevel uses the public GitHub API, so only activity from **public repositories** is counted.
 
 ---
 
@@ -109,19 +108,18 @@ The core domain has no knowledge of GitHub, HTTP, or the terminal. It only knows
 ┌─────────────────────────────────────────────────┐
 │                   cmd/main.go                   │
 │         (wiring: creates adapter, injects       │
-│          into ports, calls application core)    │
+│          into port, calls application core)     │
 └────────────────────┬────────────────────────────┘
                      │ depends on
           ┌──────────▼──────────┐
-          │   internal/port     │  ← interfaces (ports)
-          │  UserResolver       │    UserResolver
-          │  CommitFetcher      │    CommitFetcher
+          │   internal/port     │  ← interface (port)
+          │   CommitFetcher     │
           └──────┬──────────────┘
                  │ implemented by          │ used by
     ┌────────────▼──────────┐   ┌──────────▼──────────────┐
     │  internal/github      │   │  internal/gamification  │
     │  (adapter)            │   │  (domain logic)         │
-    │  GitHub REST API v3   │   │  XP, streak, daily goal │
+    │  GitHub public API    │   │  XP, streak, daily goal │
     └───────────────────────┘   └─────────────────────────┘
                                           │
                                 ┌─────────▼──────────┐
@@ -138,13 +136,13 @@ The core domain has no knowledge of GitHub, HTTP, or the terminal. It only knows
 
 ### Key design decisions
 
-**Dependency inversion** — `cmd/main.go` depends on `port.UserResolver` and `port.CommitFetcher`, not on `github.Client` directly. Swapping GitHub for GitLab, a local git log, or a mock in tests requires no changes to the application core.
+**Dependency inversion** — `cmd/main.go` depends on `port.CommitFetcher`, not on `github.Client` directly. Swapping GitHub for GitLab, a local git log, or a mock in tests requires no changes to the application core.
 
 **Pure domain logic** — `internal/gamification` has no imports outside the standard library and `internal/model`. Every function is a pure computation: same input, same output, no side effects. This makes the business rules trivially testable.
 
 **Separation of concerns** — presentation lives entirely in `internal/ui`. The domain never calls `fmt.Println`. The GitHub adapter never formats strings for the terminal.
 
-**Testable by design** — `run(resolver, fetcher, debug)` in `main.go` accepts interfaces, so the entire application flow can be exercised with mock adapters without any HTTP calls or real tokens.
+**Testable by design** — `run(username, fetcher, debug)` in `main.go` accepts an interface, so the entire application flow can be exercised with a mock adapter without any HTTP calls.
 
 ### Project structure
 
@@ -154,20 +152,15 @@ devlevel/
 │   └── main.go                  # Wiring and entrypoint
 ├── internal/
 │   ├── port/
-│   │   └── port.go              # Port interfaces (UserResolver, CommitFetcher)
+│   │   └── port.go              # Port interface (CommitFetcher)
 │   ├── model/
 │   │   └── types.go             # Domain types (Commit, Stats, extension points)
 │   ├── gamification/
 │   │   └── engine.go            # Domain logic: XP, streak, daily goal, rank
 │   ├── github/
-│   │   └── client.go            # GitHub adapter (implements port interfaces)
-│   ├── ui/
-│   │   └── render.go            # Output adapter (terminal rendering)
-│   └── env/
-│       └── loader.go            # .env file loader
-├── spec/
-│   ├── SPEC.md                  # Feature specification
-│   └── CONTEXT.md               # Technical context
+│   │   └── client.go            # GitHub adapter (implements CommitFetcher)
+│   └── ui/
+│       └── render.go            # Output adapter (terminal rendering)
 ├── go.mod
 └── README.md
 ```

@@ -5,11 +5,6 @@ package port
 
 import "devlevel/internal/model"
 
-// UserResolver resolves the identity of the authenticated user.
-type UserResolver interface {
-	GetAuthenticatedUser() (string, error)
-}
-
 // CommitFetcher fetches recent commits for a given username.
 type CommitFetcher interface {
 	FetchRecentCommits(username string, debug bool) ([]model.Commit, error)

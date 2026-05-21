@@ -1,10 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
-	"devlevel/internal/env"
 	"devlevel/internal/gamification"
 	githubadapter "devlevel/internal/github"
 	"devlevel/internal/model"
@@ -13,34 +13,24 @@ import (
 )
 
 func main() {
-	if err := env.Load(".env"); err != nil {
-		fmt.Fprintln(os.Stderr, "Warning: could not read .env file:", err)
-	}
+	username := flag.String("user", "", "GitHub username (e.g. --user marcusantonius88)")
+	debug := flag.Bool("debug", false, "Print debug information about API calls")
+	flag.Parse()
 
-	debug := len(os.Args) > 1 && os.Args[1] == "--debug"
-
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		fmt.Fprintln(os.Stderr, "Error: GITHUB_TOKEN is not set.")
-		fmt.Fprintln(os.Stderr, "Tip: add it to the .env file as GITHUB_TOKEN=ghp_...")
+	if *username == "" {
+		fmt.Fprintln(os.Stderr, "Error: --user is required.")
+		fmt.Fprintln(os.Stderr, "Usage: devlevel --user <github-username>")
 		os.Exit(1)
 	}
 
-	// Wire the GitHub adapter to the port interfaces.
-	// main.go only knows about port.UserResolver and port.CommitFetcher —
-	// swapping the adapter (e.g. for GitLab) requires no changes here.
-	adapter := githubadapter.NewClient(token)
-	run(adapter, adapter, debug)
+	adapter := githubadapter.NewClient()
+	run(*username, adapter, *debug)
 }
 
 // run contains the application flow and depends only on port interfaces,
 // making it straightforward to test with mock adapters.
-func run(resolver port.UserResolver, fetcher port.CommitFetcher, debug bool) {
-	username, err := resolver.GetAuthenticatedUser()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(1)
-	}
+func run(username string, fetcher port.CommitFetcher, debug bool) {
+	fmt.Println("ℹ️  Using public GitHub API")
 
 	commits, err := fetcher.FetchRecentCommits(username, debug)
 	if err != nil {

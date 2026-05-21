@@ -14,16 +14,15 @@ const (
 	windowDays = 7
 )
 
-// Client wraps GitHub REST API v3 calls.
+// Client wraps GitHub public REST API v3 calls.
+// No authentication is required — only public activity is accessible.
 type Client struct {
-	token      string
 	httpClient *http.Client
 }
 
-// NewClient creates an authenticated GitHub API client.
-func NewClient(token string) *Client {
+// NewClient creates a GitHub API client using only public endpoints.
+func NewClient() *Client {
 	return &Client{
-		token:      token,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 	}
 }
@@ -33,53 +32,24 @@ func (c *Client) newRequest(url string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	return req, nil
 }
 
-// GetAuthenticatedUser resolves the GitHub login for the supplied token.
-func (c *Client) GetAuthenticatedUser() (string, error) {
-	req, err := c.newRequest(apiBase + "/user")
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("could not connect to GitHub API")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf("GITHUB_TOKEN is missing or invalid")
-	}
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GitHub API error: status %d", resp.StatusCode)
-	}
-
-	var user struct {
-		Login string `json:"login"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		return "", err
-	}
-
-	return user.Login, nil
-}
-
-// FetchRecentCommits returns commits authored by username in the last 7 days.
+// FetchRecentCommits returns commits from public repos for the given username
+// in the last 7 days.
 //
 // Strategy:
-//  1. Fetch PushEvents from /users/{username}/events (up to 100).
+//  1. Fetch PushEvents from /users/{username}/events/public (up to 100).
 //  2. For each PushEvent within the time window, use the compare API
 //     (/repos/{owner}/{repo}/compare/{before}...{head}) to get the real
-//     commit list — this works even for private repos when the token has
-//     access, and avoids the empty-commits-array issue in the events payload.
+//     commit count — the events payload does not include commits directly.
+//
+// Note: only activity from public repositories is visible without a token.
 func (c *Client) FetchRecentCommits(username string, debug bool) ([]model.Commit, error) {
 	cutoff := time.Now().UTC().AddDate(0, 0, -windowDays)
-	url := fmt.Sprintf("%s/users/%s/events?per_page=100", apiBase, username)
+	url := fmt.Sprintf("%s/users/%s/events/public?per_page=100", apiBase, username)
 
 	req, err := c.newRequest(url)
 	if err != nil {
@@ -92,6 +62,9 @@ func (c *Client) FetchRecentCommits(username string, debug bool) ([]model.Commit
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("user %q not found on GitHub", username)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GitHub API error: status %d", resp.StatusCode)
 	}
@@ -124,14 +97,13 @@ func (c *Client) FetchRecentCommits(username string, debug bool) ([]model.Commit
 			continue
 		}
 
-		// Use the compare API to get the actual commits in this push.
 		pushCommits, err := c.fetchCompareCommits(e.Repo.Name, e.Payload.Before, e.Payload.Head, e.CreatedAt)
 		if err != nil {
 			if debug {
 				fmt.Printf("[debug] compare failed for %s (%s...%s): %v\n",
 					e.Repo.Name, e.Payload.Before[:7], e.Payload.Head[:7], err)
 			}
-			// Fall back: count as 1 commit for this push so we don't lose the event
+			// Fall back: count as 1 commit so we don't lose the push event
 			commits = append(commits, model.Commit{SHA: e.Payload.Head, Date: e.CreatedAt})
 			continue
 		}

@@ -7,7 +7,7 @@
 ![API](https://img.shields.io/badge/GitHub-Public%20API-black)
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
 
-> DevLevel helps developers build consistency through daily GitHub commit streaks. Inspired by Duolingo's streak system, it turns coding habits into a motivating CLI experience with streak tracking, daily goals, XP progression, and gamified developer growth.
+DevLevel helps developers build consistency through daily GitHub commit streaks. Inspired by *Duolingo's streak system*, it turns coding habits into a motivating CLI experience with streak tracking, daily goals, XP progression, and gamified developer growth.
 
 ```
 🚀 DevLevel
@@ -21,8 +21,7 @@
 ⚡ XP      : 130
 🏅 Rank    : Builder
 
-📈 Progress to Level 3
-   ████░░░░░░ 40%
+📈 Progress to Level 3  [████░░░░░░] 40%
 🎯 Next Level: 120 XP remaining
 
 📊 Summary

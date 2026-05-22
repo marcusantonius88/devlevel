@@ -1,5 +1,5 @@
-# Internal docs (specs and context)
-docs/
+# Internal docs (specs and context — markdown only)
+docs/*.md
 
 # Go build artifacts
 devlevel

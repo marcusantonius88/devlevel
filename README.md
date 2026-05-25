@@ -69,25 +69,68 @@ No external dependencies. No tokens. No `.env` files.
 
 ---
 
-## Running
+## Getting started
+
+**1. First-time setup — run once:**
 
 ```bash
-go run ./cmd --user <github-username>
+devlevel setup
 ```
 
-Example:
+```
+Enter your GitHub username: marcusantonius88
+✅ Configuration saved successfully
+   Config location: ~/.devlevel/config.json
+
+You're all set. Run devlevel to check your streak.
+```
+
+**2. Daily use:**
 
 ```bash
-go run ./cmd --user marcusantonius88
+devlevel
+```
+
+That's it. No arguments needed.
+
+---
+
+## Running from source
+
+```bash
+# First-time setup
+go run ./cmd setup
+
+# Daily use
+go run ./cmd
 ```
 
 Debug mode — shows each PushEvent and commit count per repo:
 
 ```bash
-go run ./cmd --user marcusantonius88 --debug
+go run ./cmd --debug
 ```
 
 > **Note:** DevLevel uses the public GitHub API, so only activity from **public repositories** is counted.
+
+---
+
+## Configuration
+
+Your username is stored locally at:
+
+| OS | Path |
+|---|---|
+| Linux / macOS | `~/.devlevel/config.json` |
+| Windows | `C:\Users\<user>\.devlevel\config.json` |
+
+```json
+{
+  "github_username": "marcusantonius88"
+}
+```
+
+To change your username, just run `devlevel setup` again.
 
 ---
 

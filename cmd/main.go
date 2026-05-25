@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
+	"devlevel/internal/config"
 	"devlevel/internal/gamification"
 	githubadapter "devlevel/internal/github"
 	"devlevel/internal/model"
@@ -13,18 +17,55 @@ import (
 )
 
 func main() {
-	username := flag.String("user", "", "GitHub username (e.g. --user marcusantonius88)")
 	debug := flag.Bool("debug", false, "Print debug information about API calls")
 	flag.Parse()
 
-	if *username == "" {
-		fmt.Fprintln(os.Stderr, "Error: --user is required.")
-		fmt.Fprintln(os.Stderr, "Usage: devlevel --user <github-username>")
+	// Subcommand routing: "devlevel setup" or "devlevel"
+	if flag.NArg() > 0 && flag.Arg(0) == "setup" {
+		runSetup()
+		return
+	}
+
+	cfg, err := config.Load()
+	if err != nil {
+		if errors.Is(err, config.ErrNotConfigured) {
+			fmt.Fprintln(os.Stderr, "❌ No GitHub username configured.")
+			fmt.Fprintln(os.Stderr, "Please run:")
+			fmt.Fprintln(os.Stderr, "   devlevel setup")
+			os.Exit(1)
+		}
+		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
 
 	adapter := githubadapter.NewClient()
-	run(*username, adapter, *debug)
+	run(cfg.GitHubUsername, adapter, *debug)
+}
+
+// runSetup prompts the user for their GitHub username and saves it locally.
+func runSetup() {
+	fmt.Print("Enter your GitHub username: ")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	username := strings.TrimSpace(scanner.Text())
+
+	if err := config.ValidateUsername(username); err != nil {
+		fmt.Fprintln(os.Stderr, "❌ Invalid username:", err)
+		os.Exit(1)
+	}
+
+	cfg := &config.Config{GitHubUsername: username}
+	if err := config.Save(cfg); err != nil {
+		fmt.Fprintln(os.Stderr, "❌ Could not save configuration:", err)
+		os.Exit(1)
+	}
+
+	dir, _ := config.Dir()
+	fmt.Println("✅ Configuration saved successfully")
+	fmt.Printf("   Config location: %s/config.json\n", dir)
+	fmt.Println()
+	fmt.Println("You're all set. Run devlevel to check your streak.")
 }
 
 // run contains the application flow and depends only on port interfaces,

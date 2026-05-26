@@ -153,34 +153,25 @@ DevLevel is a small project, but it was built with clean architecture principles
 
 The core domain has no knowledge of GitHub, HTTP, or the terminal. It only knows about commits and stats. External concerns are handled by adapters that implement well-defined port interfaces.
 
-```
-┌─────────────────────────────────────────────────┐
-│                   cmd/main.go                   │
-│         (wiring: creates adapter, injects       │
-│          into port, calls application core)     │
-└────────────────────┬────────────────────────────┘
-                     │ depends on
-          ┌──────────▼──────────┐
-          │   internal/port     │  ← interface (port)
-          │   CommitFetcher     │
-          └──────┬──────────────┘
-                 │ implemented by          │ used by
-    ┌────────────▼──────────┐   ┌──────────▼──────────────┐
-    │  internal/github      │   │  internal/gamification  │
-    │  (adapter)            │   │  (domain logic)         │
-    │  GitHub public API    │   │  XP, streak, daily goal │
-    └───────────────────────┘   └─────────────────────────┘
-                                          │
-                                ┌─────────▼──────────┐
-                                │   internal/model   │
-                                │   Commit, Stats    │
-                                └────────────────────┘
-                                          │
-                                ┌─────────▼──────────┐
-                                │    internal/ui     │
-                                │  (output adapter)  │
-                                │  terminal render   │
-                                └────────────────────┘
+```mermaid
+graph TD
+    A["cmd/main.go\n(wiring: creates adapter,\ninjects into port,\ncalls application core)"]
+
+    B["internal/port\nCommitFetcher\n(interface)"]
+
+    C["internal/github\n(adapter)\nGitHub public API"]
+
+    D["internal/gamification\n(domain logic)\nXP · streak · daily goal"]
+
+    E["internal/model\nCommit · Stats"]
+
+    F["internal/ui\n(output adapter)\nterminal render"]
+
+    A -->|depends on| B
+    B -->|implemented by| C
+    B -->|used by| D
+    D --> E
+    E --> F
 ```
 
 ### Key design decisions

@@ -75,6 +75,13 @@ func run(username string, fetcher port.CommitFetcher, debug bool) {
 
 	commits, err := fetcher.FetchRecentCommits(username, debug)
 	if err != nil {
+		if errors.Is(err, port.ErrRateLimit) {
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "⚠️  GitHub API rate limit reached.")
+			fmt.Fprintln(os.Stderr, "   The public API allows 60 requests/hour without authentication.")
+			fmt.Fprintln(os.Stderr, "   Please wait a few minutes and try again.")
+			os.Exit(1)
+		}
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}

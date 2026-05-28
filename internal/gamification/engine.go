@@ -73,11 +73,12 @@ func RankTitle(level int) string {
 	}
 }
 
-// DailyGoalMet returns true if the user has at least one commit today (UTC).
+// DailyGoalMet returns true if the user has at least one commit today,
+// evaluated in the local timezone of the machine running the tool.
 func DailyGoalMet(commits []model.Commit) bool {
-	today := time.Now().UTC().Format("2006-01-02")
+	today := time.Now().Format("2006-01-02") // local time
 	for _, c := range commits {
-		if c.Date.UTC().Format("2006-01-02") == today {
+		if c.Date.Local().Format("2006-01-02") == today {
 			return true
 		}
 	}
@@ -85,19 +86,21 @@ func DailyGoalMet(commits []model.Commit) bool {
 }
 
 // CalculateStreak counts consecutive days with at least one commit going
-// backwards from today. If there's no activity today yet, it starts from
-// yesterday to avoid breaking an active streak mid-day.
+// backwards from today, evaluated in the local timezone of the machine.
+// If there's no activity today yet, it starts from yesterday to avoid
+// breaking an active streak mid-day.
 func CalculateStreak(commits []model.Commit) int {
 	if len(commits) == 0 {
 		return 0
 	}
 
+	// Map active days using local time so the user's timezone is respected.
 	activeDays := make(map[string]bool, len(commits))
 	for _, c := range commits {
-		activeDays[c.Date.UTC().Format("2006-01-02")] = true
+		activeDays[c.Date.Local().Format("2006-01-02")] = true
 	}
 
-	today := time.Now().UTC()
+	today := time.Now() // local time
 	start := today
 	if !activeDays[today.Format("2006-01-02")] {
 		// No commit yet today — start counting from yesterday

@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"devlevel/internal/model"
+	"devlevel/internal/port"
 )
 
 const (
 	apiBase    = "https://api.github.com"
-	windowDays = 7
+	windowDays = 30
 )
 
 // Client wraps GitHub public REST API v3 calls.
@@ -38,17 +39,47 @@ func (c *Client) newRequest(url string) (*http.Request, error) {
 }
 
 // FetchRecentCommits returns commits from public repos for the given username
-// in the last 7 days.
+// in the last windowDays days.
 //
-// Strategy:
-//  1. Fetch PushEvents from /users/{username}/events/public (up to 100).
-//  2. For each PushEvent within the time window, use the compare API
-//     (/repos/{owner}/{repo}/compare/{before}...{head}) to get the real
-//     commit count — the events payload does not include commits directly.
+// Strategy (request-efficient):
+//  1. Fetch PushEvents to discover which repos had activity (1 request).
+//  2. Deduplicate repos touched within the window.
+//  3. For each unique repo, fetch commits filtered by author + since date
+//     (1 request per repo) — far fewer requests than 1 per PushEvent.
 //
 // Note: only activity from public repositories is visible without a token.
 func (c *Client) FetchRecentCommits(username string, debug bool) ([]model.Commit, error) {
-	cutoff := time.Now().UTC().AddDate(0, 0, -windowDays)
+	since := time.Now().UTC().AddDate(0, 0, -windowDays)
+
+	// Step 1 — discover active repos from PushEvents (1 request).
+	activeRepos, err := c.fetchActiveRepos(username, since, debug)
+	if err != nil {
+		return nil, err
+	}
+
+	if debug {
+		fmt.Printf("[debug] active repos in window: %v\n", activeRepos)
+	}
+
+	// Step 2 — fetch commits per repo (1 request each).
+	var commits []model.Commit
+	for _, repo := range activeRepos {
+		repoCommits, err := c.fetchRepoCommits(repo, username, since, debug)
+		if err != nil {
+			if debug {
+				fmt.Printf("[debug] skipping repo %s: %v\n", repo, err)
+			}
+			continue
+		}
+		commits = append(commits, repoCommits...)
+	}
+
+	return commits, nil
+}
+
+// fetchActiveRepos returns the unique list of public repos the user pushed to
+// within the time window. Uses a single events/public request.
+func (c *Client) fetchActiveRepos(username string, since time.Time, debug bool) ([]string, error) {
 	url := fmt.Sprintf("%s/users/%s/events/public?per_page=100", apiBase, username)
 
 	req, err := c.newRequest(url)
@@ -65,6 +96,9 @@ func (c *Client) FetchRecentCommits(username string, debug bool) ([]model.Commit
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("user %q not found on GitHub", username)
 	}
+	if resp.StatusCode == http.StatusForbidden {
+		return nil, port.ErrRateLimit
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GitHub API error: status %d", resp.StatusCode)
 	}
@@ -75,53 +109,35 @@ func (c *Client) FetchRecentCommits(username string, debug bool) ([]model.Commit
 		Repo      struct {
 			Name string `json:"name"` // "owner/repo"
 		} `json:"repo"`
-		Payload struct {
-			Before string `json:"before"`
-			Head   string `json:"head"`
-		} `json:"payload"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
 		return nil, err
 	}
 
-	var commits []model.Commit
+	seen := make(map[string]bool)
+	var repos []string
 	for _, e := range events {
 		if e.Type != "PushEvent" {
 			continue
 		}
-		if e.CreatedAt.Before(cutoff) {
+		if e.CreatedAt.Before(since) {
 			continue
 		}
-		if e.Payload.Before == "" || e.Payload.Head == "" {
-			continue
+		if !seen[e.Repo.Name] {
+			seen[e.Repo.Name] = true
+			repos = append(repos, e.Repo.Name)
 		}
-
-		pushCommits, err := c.fetchCompareCommits(e.Repo.Name, e.Payload.Before, e.Payload.Head, e.CreatedAt)
-		if err != nil {
-			if debug {
-				fmt.Printf("[debug] compare failed for %s (%s...%s): %v\n",
-					e.Repo.Name, e.Payload.Before[:7], e.Payload.Head[:7], err)
-			}
-			// Fall back: count as 1 commit so we don't lose the push event
-			commits = append(commits, model.Commit{SHA: e.Payload.Head, Date: e.CreatedAt})
-			continue
-		}
-
-		if debug {
-			fmt.Printf("[debug] PushEvent at %s — repo: %s — %d commit(s)\n",
-				e.CreatedAt.Format("2006-01-02"), e.Repo.Name, len(pushCommits))
-		}
-		commits = append(commits, pushCommits...)
 	}
 
-	return commits, nil
+	return repos, nil
 }
 
-// fetchCompareCommits calls the compare API and returns the commits between
-// base and head, all stamped with the push timestamp.
-func (c *Client) fetchCompareCommits(repoFullName, base, head string, pushTime time.Time) ([]model.Commit, error) {
-	url := fmt.Sprintf("%s/repos/%s/compare/%s...%s", apiBase, repoFullName, base, head)
+// fetchRepoCommits fetches commits by the given author in a repo since a date.
+// Uses /repos/{owner}/{repo}/commits?author=...&since=... (1 request per repo).
+func (c *Client) fetchRepoCommits(repoFullName, author string, since time.Time, debug bool) ([]model.Commit, error) {
+	url := fmt.Sprintf("%s/repos/%s/commits?author=%s&since=%s&per_page=100",
+		apiBase, repoFullName, author, since.Format(time.RFC3339))
 
 	req, err := c.newRequest(url)
 	if err != nil {
@@ -134,22 +150,37 @@ func (c *Client) fetchCompareCommits(repoFullName, base, head string, pushTime t
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusForbidden {
+		return nil, fmt.Errorf("rate limit or access denied")
+	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("compare API status %d", resp.StatusCode)
+		return nil, fmt.Errorf("commits API status %d", resp.StatusCode)
 	}
 
-	var result struct {
-		Commits []struct {
-			SHA string `json:"sha"`
-		} `json:"commits"`
+	var result []struct {
+		SHA    string `json:"sha"`
+		Commit struct {
+			Author struct {
+				Date time.Time `json:"date"`
+			} `json:"author"`
+		} `json:"commit"`
 	}
+
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}
 
-	commits := make([]model.Commit, len(result.Commits))
-	for i, rc := range result.Commits {
-		commits[i] = model.Commit{SHA: rc.SHA, Date: pushTime}
+	commits := make([]model.Commit, len(result))
+	for i, rc := range result {
+		commits[i] = model.Commit{
+			SHA:  rc.SHA,
+			Date: rc.Commit.Author.Date,
+		}
 	}
+
+	if debug {
+		fmt.Printf("[debug] repo: %s — %d commit(s) in window\n", repoFullName, len(commits))
+	}
+
 	return commits, nil
 }

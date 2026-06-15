@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,8 +12,9 @@ import (
 )
 
 const (
-	apiBase    = "https://api.github.com"
-	windowDays = 30
+	apiBase        = "https://api.github.com"
+	windowDays     = 30
+	requestTimeout = 15 * time.Second // per-request deadline
 )
 
 // Client wraps GitHub public REST API v3 calls.
@@ -24,18 +26,20 @@ type Client struct {
 // NewClient creates a GitHub API client using only public endpoints.
 func NewClient() *Client {
 	return &Client{
-		httpClient: &http.Client{Timeout: 10 * time.Second},
+		httpClient: &http.Client{Timeout: 20 * time.Second},
 	}
 }
 
-func (c *Client) newRequest(url string) (*http.Request, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func (c *Client) newRequestWithTimeout(url string) (*http.Request, context.CancelFunc, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, err
+		cancel()
+		return nil, nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	return req, nil
+	return req, cancel, nil
 }
 
 // FetchRecentCommits returns commits from public repos for the given username
@@ -47,45 +51,53 @@ func (c *Client) newRequest(url string) (*http.Request, error) {
 //  3. For each unique repo, fetch commits filtered by author + since date
 //     (1 request per repo) — far fewer requests than 1 per PushEvent.
 //
+// Repos that time out or return errors are skipped gracefully so one
+// unresponsive repo cannot block the entire result.
+//
 // Note: only activity from public repositories is visible without a token.
-func (c *Client) FetchRecentCommits(username string, debug bool) ([]model.Commit, error) {
+func (c *Client) FetchRecentCommits(username string, debug bool) (port.FetchResult, error) {
 	since := time.Now().UTC().AddDate(0, 0, -windowDays)
 
 	// Step 1 — discover active repos from PushEvents (1 request).
-	activeRepos, err := c.fetchActiveRepos(username, since, debug)
+	activeRepos, err := c.fetchActiveRepos(username, since)
 	if err != nil {
-		return nil, err
+		return port.FetchResult{}, err
 	}
 
 	if debug {
 		fmt.Printf("[debug] active repos in window: %v\n", activeRepos)
 	}
 
-	// Step 2 — fetch commits per repo (1 request each).
-	var commits []model.Commit
+	// Step 2 — fetch commits per repo (1 request each), skipping on error.
+	result := port.FetchResult{TotalRepos: len(activeRepos)}
 	for _, repo := range activeRepos {
-		repoCommits, err := c.fetchRepoCommits(repo, username, since, debug)
+		repoCommits, err := c.fetchRepoCommits(repo, username, since)
 		if err != nil {
+			result.SkippedRepos++
 			if debug {
 				fmt.Printf("[debug] skipping repo %s: %v\n", repo, err)
 			}
 			continue
 		}
-		commits = append(commits, repoCommits...)
+		if debug {
+			fmt.Printf("[debug] repo: %s — %d commit(s) in window\n", repo, len(repoCommits))
+		}
+		result.Commits = append(result.Commits, repoCommits...)
 	}
 
-	return commits, nil
+	return result, nil
 }
 
 // fetchActiveRepos returns the unique list of public repos the user pushed to
 // within the time window. Uses a single events/public request.
-func (c *Client) fetchActiveRepos(username string, since time.Time, debug bool) ([]string, error) {
+func (c *Client) fetchActiveRepos(username string, since time.Time) ([]string, error) {
 	url := fmt.Sprintf("%s/users/%s/events/public?per_page=100", apiBase, username)
 
-	req, err := c.newRequest(url)
+	req, cancel, err := c.newRequestWithTimeout(url)
 	if err != nil {
 		return nil, err
 	}
+	defer cancel()
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -135,29 +147,32 @@ func (c *Client) fetchActiveRepos(username string, since time.Time, debug bool) 
 
 // fetchRepoCommits fetches commits by the given author in a repo since a date.
 // Uses /repos/{owner}/{repo}/commits?author=...&since=... (1 request per repo).
-func (c *Client) fetchRepoCommits(repoFullName, author string, since time.Time, debug bool) ([]model.Commit, error) {
+// Returns an error (and is skipped by the caller) if the request times out or fails.
+func (c *Client) fetchRepoCommits(repoFullName, author string, since time.Time) ([]model.Commit, error) {
 	url := fmt.Sprintf("%s/repos/%s/commits?author=%s&since=%s&per_page=100",
 		apiBase, repoFullName, author, since.Format(time.RFC3339))
 
-	req, err := c.newRequest(url)
+	req, cancel, err := c.newRequestWithTimeout(url)
 	if err != nil {
 		return nil, err
 	}
+	defer cancel()
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		// Includes context.DeadlineExceeded — repo is skipped gracefully.
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusForbidden {
-		return nil, fmt.Errorf("rate limit or access denied")
+		return nil, port.ErrRateLimit
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("commits API status %d", resp.StatusCode)
 	}
 
-	var result []struct {
+	var raw []struct {
 		SHA    string `json:"sha"`
 		Commit struct {
 			Author struct {
@@ -166,20 +181,16 @@ func (c *Client) fetchRepoCommits(repoFullName, author string, since time.Time, 
 		} `json:"commit"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, err
 	}
 
-	commits := make([]model.Commit, len(result))
-	for i, rc := range result {
+	commits := make([]model.Commit, len(raw))
+	for i, rc := range raw {
 		commits[i] = model.Commit{
 			SHA:  rc.SHA,
 			Date: rc.Commit.Author.Date,
 		}
-	}
-
-	if debug {
-		fmt.Printf("[debug] repo: %s — %d commit(s) in window\n", repoFullName, len(commits))
 	}
 
 	return commits, nil

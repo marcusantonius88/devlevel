@@ -73,7 +73,7 @@ func runSetup() {
 func run(username string, fetcher port.CommitFetcher, debug bool) {
 	fmt.Println("ℹ️  Using public GitHub API")
 
-	commits, err := fetcher.FetchRecentCommits(username, debug)
+	result, err := fetcher.FetchRecentCommits(username, debug)
 	if err != nil {
 		if errors.Is(err, port.ErrRateLimit) {
 			fmt.Fprintln(os.Stderr, "")
@@ -86,7 +86,22 @@ func run(username string, fetcher port.CommitFetcher, debug bool) {
 		os.Exit(1)
 	}
 
-	stats := buildStats(username, commits)
+	// All repos timed out — data is entirely unreliable, don't show stats.
+	if result.TotalRepos > 0 && result.SkippedRepos == result.TotalRepos {
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "⚠️  Could not retrieve your activity data.")
+		fmt.Fprintln(os.Stderr, "   GitHub API is responding slowly right now.")
+		fmt.Fprintln(os.Stderr, "   Your streak is safe — please try again in a few minutes.")
+		os.Exit(1)
+	}
+
+	stats := buildStats(username, result.Commits)
+
+	// Some repos timed out — warn that results may be incomplete.
+	if result.SkippedRepos > 0 {
+		fmt.Printf("⚠️  %d of %d repo(s) could not be reached — data may be incomplete\n\n",
+			result.SkippedRepos, result.TotalRepos)
+	}
 
 	ui.Render(
 		stats,

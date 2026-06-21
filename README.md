@@ -218,3 +218,9 @@ The domain types and engine already have extension points stubbed out for these 
 - [ ] Configurable activity window (`--days` flag)
 - [ ] Additional XP sources (PRs, reviews, issues)
 - [ ] Persistent history across runs
+
+---
+
+## 📜 License
+
+MIT License

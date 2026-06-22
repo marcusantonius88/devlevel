@@ -13,6 +13,7 @@ import (
 	githubadapter "devlevel/internal/github"
 	"devlevel/internal/model"
 	"devlevel/internal/port"
+	"devlevel/internal/state"
 	"devlevel/internal/ui"
 )
 
@@ -95,7 +96,27 @@ func run(username string, fetcher port.CommitFetcher, debug bool) {
 		os.Exit(1)
 	}
 
-	stats := buildStats(username, result.Commits)
+	// Load persisted state and apply new commits.
+	dir, err := config.Dir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
+	}
+
+	s, err := state.Load(dir)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error loading state:", err)
+		os.Exit(1)
+	}
+
+	s.ApplyCommits(result.Commits)
+
+	if err := state.Save(dir, s); err != nil {
+		// Non-fatal: warn but still show stats.
+		fmt.Fprintln(os.Stderr, "⚠️  Could not save state:", err)
+	}
+
+	stats := buildStats(username, result.Commits, s.TotalXP, s.CalculateStreak(), s.DailyGoalMet())
 
 	// Some repos timed out — warn that results may be incomplete.
 	if result.SkippedRepos > 0 {
@@ -111,14 +132,15 @@ func run(username string, fetcher port.CommitFetcher, debug bool) {
 	)
 }
 
-// buildStats computes all metrics from raw commits and returns a Stats value.
-func buildStats(username string, commits []model.Commit) model.Stats {
+// buildStats computes all metrics using persisted state for XP and streak,
+// and the current API window for commit count and daily goal.
+func buildStats(username string, commits []model.Commit, totalXP, streak int, dailyGoalMet bool) model.Stats {
 	stats := model.Stats{
 		Username:     username,
-		XP:           gamification.CalculateXP(commits),
-		Streak:       gamification.CalculateStreak(commits),
+		XP:           totalXP,
+		Streak:       streak,
 		CommitCount:  len(commits),
-		DailyGoalMet: gamification.DailyGoalMet(commits),
+		DailyGoalMet: dailyGoalMet,
 	}
 	stats.Level = gamification.CalculateLevel(stats.XP)
 	return stats

@@ -63,7 +63,7 @@ func Render(s model.Stats, rank string, progressPct, xpRemaining int) {
 	// --- Summary block ---
 	fmt.Println()
 	fmt.Println("📊 Summary")
-	fmt.Printf("   • Recent activity: %s\n", formatCommits(s.CommitCount))
+	fmt.Printf("   • Last 30 days: %s\n", formatCommits(s.CommitCount))
 	fmt.Printf("   • %s\n", motivationalMessage(s.DailyGoalMet, s.Streak))
 }
 

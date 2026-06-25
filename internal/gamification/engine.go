@@ -11,66 +11,70 @@ func CalculateXP(commits []model.Commit) int {
 	return len(commits) * 10
 }
 
-// CalculateLevel maps XP to a level using the progression table from SPEC.md.
+// levels defines the full progression table for the Craft track.
+var levels = []struct {
+	minXP int
+	rank  string
+}{
+	{0, "Apprentice"},
+	{100, "Craftsman"},
+	{250, "Artisan"},
+	{500, "Forger"},
+	{750, "Blacksmith"},
+	{1000, "Grandmaster"},
+	{1500, "Sage"},
+	{2000, "Oracle"},
+	{3000, "Mythic"},
+}
+
+// CalculateLevel returns the level (1-based) for the given XP.
 func CalculateLevel(xp int) int {
-	switch {
-	case xp >= 500:
-		return 4
-	case xp >= 250:
-		return 3
-	case xp >= 100:
-		return 2
-	default:
-		return 1
+	level := 1
+	for i, l := range levels {
+		if xp >= l.minXP {
+			level = i + 1
+		}
 	}
+	return level
 }
 
 // LevelProgress returns the XP progress percentage towards the next level
 // (0–100). Returns 100 if the user is already at max level.
 func LevelProgress(xp int) int {
-	type threshold struct{ from, to int }
-	levels := []threshold{
-		{0, 100},   // level 1 → 2
-		{100, 250}, // level 2 → 3
-		{250, 500}, // level 3 → 4
-	}
-	for _, l := range levels {
-		if xp < l.to {
-			return (xp - l.from) * 100 / (l.to - l.from)
+	for i, l := range levels {
+		if i == len(levels)-1 {
+			return 100 // max level
+		}
+		next := levels[i+1]
+		if xp < next.minXP {
+			return (xp - l.minXP) * 100 / (next.minXP - l.minXP)
 		}
 	}
-	return 100 // max level
+	return 100
 }
 
 // XPToNextLevel returns how many XP are still needed to reach the next level.
 // Returns 0 if the user is already at max level.
 func XPToNextLevel(xp int) int {
-	switch {
-	case xp < 100:
-		return 100 - xp
-	case xp < 250:
-		return 250 - xp
-	case xp < 500:
-		return 500 - xp
-	default:
-		return 0
+	for i, l := range levels {
+		_ = l
+		if i == len(levels)-1 {
+			return 0 // max level
+		}
+		next := levels[i+1]
+		if xp < next.minXP {
+			return next.minXP - xp
+		}
 	}
+	return 0
 }
 
-// RankTitle returns the title associated with a given level.
+// RankTitle returns the Craft track rank title for a given level.
 func RankTitle(level int) string {
-	switch level {
-	case 1:
-		return "Rookie"
-	case 2:
-		return "Builder"
-	case 3:
-		return "Engineer"
-	case 4:
-		return "Architect"
-	default:
-		return "Architect"
+	if level < 1 || level > len(levels) {
+		return levels[len(levels)-1].rank
 	}
+	return levels[level-1].rank
 }
 
 // DailyGoalMet returns true if the user has at least one commit today,

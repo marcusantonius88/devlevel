@@ -17,15 +17,15 @@ DevLevel helps developers build consistency through daily GitHub commit streaks.
 ✅ Daily Goal: COMPLETE
 
 👤 User    : marcusantonius88
-🏆 Level   : 2
-⚡ XP      : 130
-🏅 Rank    : Builder
+🏆 Level   : 4
+⚡ XP      : 520
+🏅 Rank    : Forger
 
-📈 Progress to Level 3  [████░░░░░░] 40%
-🎯 Next Level: 120 XP remaining
+📈 Progress to Level 5  [████░░░░░░] 27%
+🎯 Next Level: 230 XP remaining
 
 📊 Summary
-   • Recent activity: 13 commits
+   • Last 30 days: 47 commits
    • Keep the momentum going
 ```
 
@@ -136,12 +136,17 @@ To change your username, just run `devlevel setup` again.
 
 ## Level Progression
 
-| Level | Rank      | XP Required |
-|-------|-----------|-------------|
-| 1     | Rookie    | 0 – 99      |
-| 2     | Builder   | 100 – 249   |
-| 3     | Engineer  | 250 – 499   |
-| 4     | Architect | 500+        |
+| Level | Rank        | XP Required |
+|-------|-------------|-------------|
+| 1     | Apprentice  | 0 – 99      |
+| 2     | Craftsman   | 100 – 249   |
+| 3     | Artisan     | 250 – 499   |
+| 4     | Forger      | 500 – 749   |
+| 5     | Blacksmith  | 750 – 999   |
+| 6     | Grandmaster | 1000 – 1499 |
+| 7     | Sage        | 1500 – 1999 |
+| 8     | Oracle      | 2000 – 2999 |
+| 9     | Mythic      | 3000+       |
 
 ---
 

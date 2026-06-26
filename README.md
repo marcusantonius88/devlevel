@@ -212,6 +212,37 @@ devlevel/
 
 ---
 
+## 🤖 AI-Assisted Development
+
+This project was built using modern **AI-Assisted Software Development** practices.
+
+| Category | Tool |
+|---|---|
+| IDE / Agent | Kiro |
+| Primary Model | Auto |
+| Strategic Support | ChatGPT (GPT-4o) |
+| Methodology | Spec-Driven Development (SDD) |
+
+Development was driven by formal specifications written before implementation, following an **SDD** approach where each feature is planned, documented, and validated before code is written.
+
+### 📋 Project Specifications
+
+The features of DevLevel were planned and organized through specification documents located in the `/docs` folder. Before any implementation started, the expected behavior of each feature was described in BDD-style scenarios (Given / When / Then), establishing clear acceptance criteria that guided every design and coding decision.
+
+The `CONTEXT.md` document defined the technical boundaries upfront — language choice, external integrations, constraints, and MVP scope — ensuring that implementation stayed focused and decisions were intentional rather than ad hoc.
+
+This spec-first approach directly influenced the architecture: the clean separation between domain logic (`internal/gamification`), infrastructure (`internal/github`), and presentation (`internal/ui`) was a natural consequence of having clear feature boundaries defined before writing code.
+
+### 📚 Documentation
+
+- **`docs/CONTEXT.md`** — Technical context document written at the start of the project. Defines the execution environment, language, external integrations (GitHub REST API), constraints (standard library only, no unnecessary dependencies), and MVP limitations (no persistence, no background jobs, no GUI). Served as the architectural foundation before any code was written.
+
+- **`docs/SPEC.md`** — Functional specification describing all features in BDD format (Given / When / Then). Covers activity fetching, XP calculation, level progression, streak calculation, daily goal verification, CLI output layout, error handling, and out-of-scope boundaries. Each scenario in this document maps directly to a function or module in the codebase.
+
+AI was used to assist with architecture definition, requirements refinement, technical documentation, implementation planning, and code development — always under human review.
+
+---
+
 ## Roadmap
 
 The domain types and engine already have extension points stubbed out for these features:

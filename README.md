@@ -5,7 +5,6 @@
 ![Go](https://img.shields.io/badge/Go-1.21-blue)
 ![Architecture](https://img.shields.io/badge/Architecture-Hexagonal%20%2B%20Clean-green)
 ![API](https://img.shields.io/badge/GitHub-Public%20API-black)
-![Status](https://img.shields.io/badge/status-active-brightgreen)
 
 DevLevel helps developers build consistency through daily GitHub commit streaks. Inspired by *Duolingo's streak system*, it turns coding habits into a motivating CLI experience with streak tracking, daily goals, XP progression, and gamified developer growth.
 

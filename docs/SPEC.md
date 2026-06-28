@@ -1,113 +1,113 @@
-# DevLevel - Especificação
+# DevLevel - Specification
 
-## Visão Geral
+## Overview
 
-DevLevel é uma ferramenta CLI que ajuda desenvolvedores a construírem consistência através de ofensivas diárias de commits no GitHub. Inspirada na mecânica de streak do Duolingo, transforma o hábito de commitar em uma experiência gamificada com streak tracking, daily goal, progressão de XP e ranks.
-
----
-
-## Feature: Setup inicial
-
-DADO QUE o usuário executa `devlevel setup` pela primeira vez
-QUANDO o sistema solicitar o username do GitHub
-ENTÃO deve salvar o username em `~/.devlevel/config.json`
-E confirmar com a mensagem "✅ Configuration saved successfully"
-
-DADO QUE o usuário executa `devlevel` sem ter feito setup
-QUANDO o sistema não encontrar configuração local
-ENTÃO deve exibir "❌ No GitHub username configured."
-E orientar o usuário a executar `devlevel setup`
+DevLevel is a CLI tool that helps developers build consistency through daily GitHub commit streaks. Inspired by Duolingo's streak mechanic, it turns the habit of committing into a gamified experience with streak tracking, daily goals, XP progression, and rank titles.
 
 ---
 
-## Feature: Buscar Atividade
+## Feature: Initial Setup
 
-DADO QUE o username está configurado
-QUANDO o sistema for executado
-ENTÃO deve buscar os repos com atividade via `/users/{username}/events/public`
-E para cada repo, buscar commits do autor via `/repos/{owner}/{repo}/commits`
-E considerar apenas commits dos últimos 30 dias
+GIVEN the user runs `devlevel setup` for the first time
+WHEN the system prompts for a GitHub username
+THEN it should save the username to `~/.devlevel/config.json`
+AND confirm with "✅ Configuration saved successfully"
 
-DADO QUE a API retorna erro 403
-QUANDO o sistema detectar rate limit
-ENTÃO deve exibir mensagem explicativa sobre o limite de 60 requests/hora
-E orientar o usuário a tentar novamente em alguns minutos
-
-DADO QUE um ou mais repos não respondem dentro do timeout
-QUANDO todos os repos falharem
-ENTÃO deve exibir "Your streak is safe — please try again in a few minutes"
-E não exibir dados zerados que possam confundir o usuário
-
-DADO QUE apenas alguns repos falham por timeout
-QUANDO parte dos dados for recuperada
-ENTÃO deve exibir aviso de dados incompletos
-E mostrar os stats com os dados disponíveis
+GIVEN the user runs `devlevel` without having done setup
+WHEN the system finds no local configuration
+THEN it should display "❌ No GitHub username configured."
+AND guide the user to run `devlevel setup`
 
 ---
 
-## Feature: Cálculo de XP
+## Feature: Fetch Activity
 
-DADO uma lista de commits novos (SHAs ainda não contabilizados)
-QUANDO o sistema processar os commits
-ENTÃO cada commit novo deve somar 10 XP ao total acumulado
-E o XP total deve ser persistido em `~/.devlevel/state.json`
-E o XP nunca deve diminuir entre execuções
+GIVEN the username is configured
+WHEN the system runs
+THEN it should discover active repos via `/users/{username}/events/public`
+AND for each repo, fetch commits by the author via `/repos/{owner}/{repo}/commits`
+AND only consider commits from the last 30 days
 
-Exemplo:
+GIVEN the API returns a 403 error
+WHEN the system detects a rate limit
+THEN it should display an explanatory message about the 60 requests/hour limit
+AND guide the user to try again in a few minutes
 
-* 5 commits novos → +50 XP
+GIVEN one or more repos do not respond within the timeout
+WHEN all repos fail
+THEN it should display "Your streak is safe — please try again in a few minutes"
+AND not show zeroed stats that could confuse the user
 
----
-
-## Feature: Cálculo de Nível (Craft Track)
-
-DADO um valor total de XP acumulado
-QUANDO o sistema calcular o nível
-ENTÃO deve retornar o nível correspondente à tabela Craft Track:
-
-| Level | Rank        | XP Mínimo |
-|-------|-------------|-----------|
-| 1     | Apprentice  | 0         |
-| 2     | Craftsman   | 100       |
-| 3     | Artisan     | 250       |
-| 4     | Forger      | 500       |
-| 5     | Blacksmith  | 750       |
-| 6     | Grandmaster | 1000      |
-| 7     | Sage        | 1500      |
-| 8     | Oracle      | 2000      |
-| 9     | Mythic      | 3000      |
+GIVEN only some repos fail due to timeout
+WHEN partial data is retrieved
+THEN it should display an incomplete data warning
+AND show stats with the available data
 
 ---
 
-## Feature: Cálculo de Streak
+## Feature: XP Calculation
 
-DADO os dias com atividade persistidos no state local
-QUANDO o sistema calcular o streak
-ENTÃO deve contar os dias consecutivos com pelo menos 1 commit, retroativamente a partir de hoje
-E se não houver commit hoje, deve iniciar a contagem a partir de ontem (proteção de streak mid-day)
-E deve usar o timezone local da máquina do usuário
+GIVEN a list of new commits (SHAs not yet awarded XP)
+WHEN the system processes the commits
+THEN each new commit should add 10 XP to the accumulated total
+AND the total XP should be persisted in `~/.devlevel/state.json`
+AND XP should never decrease between runs
 
-Exemplo:
+Example:
 
-* Atividade em 3 dias consecutivos → Streak = 3
-* Falhar um dia → streak reinicia do zero
+* 5 new commits → +50 XP
+
+---
+
+## Feature: Level Calculation (Craft Track)
+
+GIVEN a total accumulated XP value
+WHEN the system calculates the level
+THEN it should return the level corresponding to the Craft Track table:
+
+| Level | Rank        | Min XP |
+|-------|-------------|--------|
+| 1     | Apprentice  | 0      |
+| 2     | Craftsman   | 100    |
+| 3     | Artisan     | 250    |
+| 4     | Forger      | 500    |
+| 5     | Blacksmith  | 750    |
+| 6     | Grandmaster | 1000   |
+| 7     | Sage        | 1500   |
+| 8     | Oracle      | 2000   |
+| 9     | Mythic      | 3000   |
+
+---
+
+## Feature: Streak Calculation
+
+GIVEN the active days persisted in the local state
+WHEN the system calculates the streak
+THEN it should count consecutive days with at least one commit, going backwards from today
+AND if there is no commit today, it should start counting from yesterday (mid-day streak protection)
+AND it should use the local timezone of the user's machine
+
+Example:
+
+* Activity on 3 consecutive days → Streak = 3
+* Missing one day → streak resets to zero
 
 ---
 
 ## Feature: Daily Goal
 
-DADO que os commits do dia foram processados
-QUANDO o sistema verificar o objetivo diário
-ENTÃO deve exibir "✅ Daily Goal: COMPLETE" se houver pelo menos 1 commit hoje (timezone local)
-E deve exibir "⚠️ Daily Goal: PENDING — commit today to protect your streak" caso contrário
+GIVEN the commits for the day have been processed
+WHEN the system checks the daily goal
+THEN it should display "✅ Daily Goal: COMPLETE" if there is at least one commit today (local timezone)
+AND it should display "⚠️ Daily Goal: PENDING — commit today to protect your streak" otherwise
 
 ---
 
-## Feature: Saída no CLI
+## Feature: CLI Output
 
-DADO que os dados foram processados
-QUANDO o sistema exibir as informações
-ENTÃO a saída deve seguir o layout abaixo, com streak como elemento principal:
+GIVEN the data has been processed
+WHEN the system displays the information
+THEN the output should follow the layout below, with streak as the main element:
 
 ```
 🚀 DevLevel
@@ -127,37 +127,37 @@ ENTÃO a saída deve seguir o layout abaixo, com streak como elemento principal:
 
 📊 Summary
    • Last 30 days: N commits
-   • <mensagem motivacional contextual>
+   • <contextual motivational message>
 ```
 
-A mensagem motivacional deve se adaptar ao contexto:
-* Streak < 7 dias → "Daily goal completed — see you tomorrow"
-* Streak 7–29 dias → "Keep the momentum going"
-* Streak 30+ dias → "Incredible consistency — keep it up"
-* Daily goal pendente → "Commit today to protect your streak"
+Motivational message adapts to context:
+* Streak < 7 days → "Daily goal completed — see you tomorrow"
+* Streak 7–29 days → "Keep the momentum going"
+* Streak 30+ days → "Incredible consistency — keep it up"
+* Daily goal pending → "Commit today to protect your streak"
 
 ---
 
-## Feature: Tratamento de Erros
+## Feature: Error Handling
 
-DADO QUE o usuário não executou o setup
-QUANDO o sistema iniciar
-ENTÃO deve exibir mensagem orientando a executar `devlevel setup`
+GIVEN the user has not run setup
+WHEN the system starts
+THEN it should display a message guiding the user to run `devlevel setup`
 
-DADO QUE a API retorna rate limit (403)
-QUANDO o sistema detectar o erro
-ENTÃO deve exibir mensagem amigável explicando o limite e pedindo para tentar mais tarde
+GIVEN the API returns a rate limit error (403)
+WHEN the system detects it
+THEN it should display a friendly message explaining the limit and asking to try again later
 
-DADO QUE todos os repos atingem timeout
-QUANDO nenhum dado for recuperado
-ENTÃO deve informar que é um problema de comunicação e que o streak está seguro
+GIVEN all repos hit timeout
+WHEN no data is retrieved
+THEN it should inform the user that it is a communication issue and that the streak is safe
 
 ---
 
-## Fora de Escopo (MVP)
+## Out of Scope (MVP)
 
-* Sem banco de dados externo
-* Sem frontend
-* Sem múltiplos usuários simultâneos
-* Sem suporte a repositórios privados (limitação da API pública)
-* Sem OAuth ou autenticação via token
+* No external database
+* No frontend
+* No multi-user support
+* No private repository support (public API limitation)
+* No OAuth or token-based authentication

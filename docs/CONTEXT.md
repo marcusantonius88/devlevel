@@ -1,59 +1,59 @@
-# DevLevel - Contexto
+# DevLevel - Context
 
-## Ambiente de Execução
+## Execution Environment
 
-* A aplicação roda localmente na máquina do usuário
-* Executada via terminal (CLI)
-* Não requer container
-
----
-
-## Linguagem e Execução
-
-* Linguagem: Go 1.21+
-* Execução diária: `devlevel` (binário compilado)
-* Execução a partir do fonte: `go run ./cmd`
+* The application runs locally on the user's machine
+* Executed via terminal (CLI)
+* No container required
 
 ---
 
-## Integrações Externas
+## Language & Runtime
 
-* GitHub REST API v3 (endpoints públicos — sem autenticação)
-* Endpoints utilizados:
-  * `GET /users/{username}/events/public` — descobre repos com atividade recente
-  * `GET /repos/{owner}/{repo}/commits?author={username}&since={date}` — busca commits por repo
-
----
-
-## Configuração do Usuário
-
-* Username do GitHub é salvo localmente via `devlevel setup`
-* Arquivo de configuração: `~/.devlevel/config.json`
-* Sem variáveis de ambiente obrigatórias
-* Sem tokens ou autenticação
+* Language: Go 1.21+
+* Daily use: `devlevel` (compiled binary)
+* From source: `go run ./cmd`
 
 ---
 
-## Persistência Local
+## External Integrations
 
-* Estado de progressão salvo em `~/.devlevel/state.json`
-* Armazena:
-  * XP total acumulado (nunca diminui)
-  * SHAs de commits já contabilizados (evita dupla contagem)
-  * Dias com atividade (permite calcular streaks além da janela da API)
-
----
-
-## Restrições
-
-* Usar apenas biblioteca padrão do Go (zero dependências externas)
-* Manter simplicidade e clareza de código
-* Arquitetura hexagonal: domínio isolado de infraestrutura e apresentação
+* GitHub REST API v3 (public endpoints — no authentication required)
+* Endpoints used:
+  * `GET /users/{username}/events/public` — discovers repos with recent activity
+  * `GET /repos/{owner}/{repo}/commits?author={username}&since={date}` — fetches commits per repo
 
 ---
 
-## Limitações conhecidas
+## User Configuration
 
-* Apenas repositórios públicos são contabilizados (limitação da API pública)
-* API pública limita 60 requests/hora por IP — uso intensivo pode atingir o limite
-* Janela de eventos da API cobre aproximadamente os últimos 30 dias
+* GitHub username is saved locally via `devlevel setup`
+* Config file location: `~/.devlevel/config.json`
+* No environment variables required
+* No tokens or authentication
+
+---
+
+## Local Persistence
+
+* Progression state is saved at `~/.devlevel/state.json`
+* Stores:
+  * Total accumulated XP (never decreases)
+  * Commit SHAs already awarded XP (prevents double-counting)
+  * Days with activity (enables streak calculation beyond the API window)
+
+---
+
+## Constraints
+
+* Use only Go's standard library (zero external dependencies)
+* Keep code simple and clear
+* Hexagonal architecture: domain isolated from infrastructure and presentation
+
+---
+
+## Known Limitations
+
+* Only public repositories are counted (public API limitation)
+* Public API rate limit: 60 requests/hour per IP — heavy use may hit the limit
+* GitHub events API covers approximately the last 30 days of activity

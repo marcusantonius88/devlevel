@@ -23,9 +23,6 @@ DevLevel helps developers build consistency through daily GitHub commit streaks.
 📈 Progress to Level 5  [████░░░░░░] 27%
 🎯 Next Level: 230 XP remaining
 
-📊 Summary
-   • Last 30 days: 47 commits
-   • Keep the momentum going
 ```
 
 ---
@@ -42,10 +39,9 @@ The streak is the main character. Everything else — XP, levels, rank — exist
 
 - 🔥 **Streak tracking** — counts consecutive days with at least one commit
 - ✅ **Daily Goal** — tells you whether today's goal is complete or still pending
-- ⚡ **XP & Levels** — 10 XP per commit, four levels with a progress bar
-- 🏅 **Rank titles** — Rookie → Builder → Engineer → Architect
+- ⚡ **XP & Levels** — 10 XP per commit, nine levels with a progress bar
+- 🏅 **Rank titles** — Apprentice → Craftsman → Artisan → Forger → Blacksmith → Grandmaster → Sage → Oracle → Mythic
 - 🎯 **Next level indicator** — shows exactly how many XP remain
-- 💬 **Motivational messages** — context-aware, adapts to your streak length
 - 🔓 **No setup required** — works with any public GitHub username, no token needed
 
 ---

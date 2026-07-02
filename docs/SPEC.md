@@ -125,16 +125,7 @@ THEN the output should follow the layout below, with streak as the main element:
    ██████░░░░ N%
 🎯 Next Level: N XP remaining
 
-📊 Summary
-   • Last 30 days: N commits
-   • <contextual motivational message>
 ```
-
-Motivational message adapts to context:
-* Streak < 7 days → "Daily goal completed — see you tomorrow"
-* Streak 7–29 days → "Keep the momentum going"
-* Streak 30+ days → "Incredible consistency — keep it up"
-* Daily goal pending → "Commit today to protect your streak"
 
 ---
 

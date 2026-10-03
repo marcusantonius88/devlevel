@@ -130,7 +130,9 @@ func (c *Client) fetchActiveRepos(username string, since time.Time) ([]string, e
 	seen := make(map[string]bool)
 	var repos []string
 	for _, e := range events {
-		if e.Type != "PushEvent" {
+		// Accept both PushEvent and CreateEvent (first push to a new repo
+		// generates a CreateEvent instead of a PushEvent on GitHub).
+		if e.Type != "PushEvent" && e.Type != "CreateEvent" {
 			continue
 		}
 		if e.CreatedAt.Before(since) {

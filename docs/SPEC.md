@@ -66,17 +66,20 @@ GIVEN a total accumulated XP value
 WHEN the system calculates the level
 THEN it should return the level corresponding to the Craft Track table:
 
-| Level | Rank        | Min XP |
-|-------|-------------|--------|
-| 1     | Apprentice  | 0      |
-| 2     | Craftsman   | 100    |
-| 3     | Artisan     | 250    |
-| 4     | Forger      | 500    |
-| 5     | Blacksmith  | 750    |
-| 6     | Grandmaster | 1000   |
-| 7     | Sage        | 1500   |
-| 8     | Oracle      | 2000   |
-| 9     | Mythic      | 3000   |
+| Level | Rank         | Min XP |
+|-------|--------------|--------|
+| 1     | Apprentice   | 0      |
+| 2     | Craftsman    | 100    |
+| 3     | Artisan      | 250    |
+| 4     | Forger       | 500    |
+| 5     | Blacksmith   | 750    |
+| 6     | Grandmaster  | 1000   |
+| 7     | Sage         | 1500   |
+| 8     | Oracle       | 2000   |
+| 9     | Mythic       | 3000   |
+| 10    | Eternal      | 5000   |
+| 11    | Transcendent | 8000   |
+| 12    | Legendary    | 15000  |
 
 ---
 

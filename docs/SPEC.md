@@ -25,6 +25,7 @@ AND guide the user to run `devlevel setup`
 GIVEN the username is configured
 WHEN the system runs
 THEN it should discover active repos via `/users/{username}/events/public`
+AND accept both `PushEvent` and `CreateEvent` (first push to a new repo generates a `CreateEvent` instead of a `PushEvent`)
 AND for each repo, fetch commits by the author via `/repos/{owner}/{repo}/commits`
 AND only consider commits from the last 30 days
 

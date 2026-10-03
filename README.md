@@ -131,17 +131,20 @@ To change your username, just run `devlevel setup` again.
 
 ## Level Progression
 
-| Level | Rank        | XP Required |
-|-------|-------------|-------------|
-| 1     | Apprentice  | 0 – 99      |
-| 2     | Craftsman   | 100 – 249   |
-| 3     | Artisan     | 250 – 499   |
-| 4     | Forger      | 500 – 749   |
-| 5     | Blacksmith  | 750 – 999   |
-| 6     | Grandmaster | 1000 – 1499 |
-| 7     | Sage        | 1500 – 1999 |
-| 8     | Oracle      | 2000 – 2999 |
-| 9     | Mythic      | 3000+       |
+| Level | Rank         | XP Required  |
+|-------|--------------|--------------|
+| 1     | Apprentice   | 0 – 99       |
+| 2     | Craftsman    | 100 – 249    |
+| 3     | Artisan      | 250 – 499    |
+| 4     | Forger       | 500 – 749    |
+| 5     | Blacksmith   | 750 – 999    |
+| 6     | Grandmaster  | 1000 – 1499  |
+| 7     | Sage         | 1500 – 1999  |
+| 8     | Oracle       | 2000 – 2999  |
+| 9     | Mythic       | 3000 – 4999  |
+| 10    | Eternal      | 5000 – 7999  |
+| 11    | Transcendent | 8000 – 14999 |
+| 12    | Legendary    | 15000+       |
 
 ---
 

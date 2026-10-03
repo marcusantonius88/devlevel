@@ -25,6 +25,9 @@ var levels = []struct {
 	{1500, "Sage"},
 	{2000, "Oracle"},
 	{3000, "Mythic"},
+	{5000, "Eternal"},
+	{8000, "Transcendent"},
+	{15000, "Legendary"},
 }
 
 // CalculateLevel returns the level (1-based) for the given XP.

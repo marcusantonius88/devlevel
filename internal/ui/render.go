@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"devlevel/internal/model"
 )
@@ -16,7 +17,7 @@ const (
 
 // Render prints the DevLevel stats to stdout.
 func Render(s model.Stats, rank string, progressPct, xpRemaining int) {
-	fmt.Println("🚀 DevLevel")
+	fmt.Printf("🚀 DevLevel — %s\n", time.Now().Format("Mon, Jan 02 2006"))
 
 	// --- Streak block (hero element) ---
 	fmt.Println()

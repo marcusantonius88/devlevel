@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"devlevel/internal/config"
 	"devlevel/internal/gamification"
@@ -21,10 +22,16 @@ func main() {
 	debug := flag.Bool("debug", false, "Print debug information about API calls")
 	flag.Parse()
 
-	// Subcommand routing: "devlevel setup" or "devlevel"
-	if flag.NArg() > 0 && flag.Arg(0) == "setup" {
-		runSetup()
-		return
+	// Subcommand routing
+	if flag.NArg() > 0 {
+		switch flag.Arg(0) {
+		case "setup":
+			runSetup()
+			return
+		case "add-day":
+			runAddDay()
+			return
+		}
 	}
 
 	cfg, err := config.Load()
@@ -67,6 +74,51 @@ func runSetup() {
 	fmt.Printf("   Config location: %s/config.json\n", dir)
 	fmt.Println()
 	fmt.Println("You're all set. Run devlevel to check your streak.")
+}
+
+// runAddDay manually marks a date as an active day in the local state.
+// Usage:
+//
+//	devlevel add-day          → adds today
+//	devlevel add-day 2026-11-06  → adds a specific date (YYYY-MM-DD)
+func runAddDay() {
+	var dateStr string
+	if flag.NArg() > 1 {
+		dateStr = strings.TrimSpace(flag.Arg(1))
+		if _, err := time.Parse("2006-01-02", dateStr); err != nil {
+			fmt.Fprintln(os.Stderr, "❌ Invalid date format. Use YYYY-MM-DD, e.g.: devlevel add-day 2026-11-06")
+			os.Exit(1)
+		}
+	} else {
+		dateStr = time.Now().Format("2006-01-02")
+	}
+
+	dir, err := config.Dir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
+	}
+
+	s, err := state.Load(dir)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error loading state:", err)
+		os.Exit(1)
+	}
+
+	if s.ActiveDays[dateStr] {
+		fmt.Printf("ℹ️  %s is already marked as an active day.\n", dateStr)
+		return
+	}
+
+	s.ActiveDays[dateStr] = true
+
+	if err := state.Save(dir, s); err != nil {
+		fmt.Fprintln(os.Stderr, "❌ Could not save state:", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("✅ %s added as an active day.\n", dateStr)
+	fmt.Println("   Run devlevel to see your updated streak.")
 }
 
 // run contains the application flow and depends only on port interfaces,

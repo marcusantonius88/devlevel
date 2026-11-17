@@ -9,7 +9,7 @@
 DevLevel helps developers build consistency through daily GitHub commit streaks. Inspired by *Duolingo's streak system*, it turns coding habits into a motivating CLI experience with streak tracking, daily goals, XP progression, and gamified developer growth.
 
 ```
-🚀 DevLevel
+🚀 DevLevel — Sat, Nov 07 2026
 ℹ️  Using public GitHub API
 
 🔥 CURRENT STREAK: 4 DAYS

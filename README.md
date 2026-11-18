@@ -90,6 +90,22 @@ That's it. No arguments needed.
 
 ---
 
+**3. API delay? Protect your streak manually:**
+
+The public GitHub API can take a few minutes to index new events. If you pushed a commit but `devlevel` still shows Daily Goal: PENDING, use `add-day` to register the day manually:
+
+```bash
+# Mark today as an active day
+devlevel add-day
+
+# Mark a specific date (YYYY-MM-DD)
+devlevel add-day 2026-11-06
+```
+
+`add-day` is **idempotent** — calling it multiple times for the same date has no effect and will never create duplicates in your state.
+
+---
+
 ## Running from source
 
 ```bash
@@ -98,6 +114,10 @@ go run ./cmd setup
 
 # Daily use
 go run ./cmd
+
+# Manually mark a day as active (if API delayed)
+go run ./cmd add-day
+go run ./cmd add-day 2026-11-06
 ```
 
 Debug mode — shows each PushEvent and commit count per repo:
